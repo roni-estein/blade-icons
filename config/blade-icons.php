@@ -61,6 +61,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Icon Set Filters
+    |--------------------------------------------------------------------------
+    |
+    | This config option allows you to define a filtered list of icons that will be
+    | loaded from each specified set, including other packages icon sets.
+    | Provide a key name for your icon set and a combination from the options below.
+    |
+    | If a set is not listed below, all icons in that set will be loaded.
+    */
+
+    'filters' => [
+
+        // 'default' => [
+        //
+        //     'icon1',
+        //     'outline.icon3',
+        //
+        // ]
+
+    ],
+
+
+    /*
+    |--------------------------------------------------------------------------
     | Default Class
     |--------------------------------------------------------------------------
     |

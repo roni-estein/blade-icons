@@ -42,6 +42,8 @@ final class BladeIconsServiceProvider extends ServiceProvider
                 $factory->add($set, $options);
             }
 
+            $factory->addFilters($config['filters'] ?? []);
+
             return $factory;
         });
 

@@ -11,6 +11,7 @@ use Illuminate\Contracts\Filesystem\FileNotFoundException;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Str;
+use Symfony\Component\Finder\SplFileInfo;
 
 final class Factory
 {
@@ -26,10 +27,18 @@ final class Factory
     /** @var array */
     private $cache = [];
 
+    /** @var array */
+    private $filters = [];
+
     public function __construct(Filesystem $filesystem, string $defaultClass = '')
     {
         $this->filesystem = $filesystem;
         $this->defaultClass = $defaultClass;
+    }
+
+    public function addFilters($filters = []): void
+    {
+        $this->filters = $filters;
     }
 
     public function all(): array
@@ -54,8 +63,6 @@ final class Factory
             throw CannotRegisterIconSet::prefixNotUnique($set, $collidingSet);
         }
 
-        $options['path'] = rtrim($options['path'], '/');
-
         if ($this->filesystem->missing($options['path'])) {
             throw CannotRegisterIconSet::nonExistingPath($set, $options['path']);
         }
@@ -69,21 +76,50 @@ final class Factory
 
     public function registerComponents(): void
     {
-        foreach ($this->sets as $set) {
-            foreach ($this->filesystem->allFiles($set['path']) as $file) {
-                if ($file->getExtension() !== 'svg') {
-                    continue;
-                }
-
-                $path = array_filter(explode('/', Str::after($file->getPath(), $set['path'])));
+        foreach ($this->sets as $set => $options) {
+            foreach ($this->getFiles($set) as $file) {
+                $path = array_filter(explode('/', Str::after($file->getPath(), $options['path'])));
 
                 Blade::component(
                     SvgComponent::class,
                     implode('.', array_filter($path + [$file->getFilenameWithoutExtension()])),
-                    $set['prefix'],
+                    $options['prefix']
                 );
             }
         }
+    }
+
+    public function getFiles($set): array
+    {
+        $options = $this->sets[$set];
+
+        $filters = collect($this->filters[$set] ?? []);
+
+        if ($filters->count() > 0) {
+            return $filters->map(function ($filter) use ($set, $options) {
+                return $this->getFile($set, $options['path'], $filter);
+            })->toArray();
+        }
+
+        return $this->filesystem->allFiles($options['path']);
+    }
+
+    /**
+     * @throws SvgNotFound
+     */
+    public function getFile($set, $path, $name): SplFileInfo
+    {
+        $file = new SplFileInfo(sprintf(
+            '%s/%s.svg',
+            rtrim($path),
+            str_replace('.', '/', $name)
+        ), '', '');
+
+        if (! $file->isFile()) {
+            throw SvgNotFound::missing($set, $name);
+        }
+
+        return $file;
     }
 
     /**
@@ -121,7 +157,7 @@ final class Factory
         return trim($this->filesystem->get(sprintf(
             '%s/%s.svg',
             rtrim($path),
-            str_replace('.', '/', $name),
+            str_replace('.', '/', $name)
         )));
     }
 
@@ -163,7 +199,7 @@ final class Factory
         return trim(sprintf(
             '%s %s',
             trim(sprintf('%s %s', $this->defaultClass, $this->sets[$set]['class'] ?? '')),
-            $class,
+            $class
         ));
     }
 }

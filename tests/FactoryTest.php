@@ -31,6 +31,56 @@ class FactoryTest extends TestCase
     }
 
     /** @test */
+    public function it_can_get_all_icons_in_a_set()
+    {
+        $set = 'default';
+        $options = [
+            'path' => __DIR__ . '/resources/svg',
+            'prefix' => 'icon',
+            'class' => '',
+        ];
+
+        $factory = (new Factory(new Filesystem(), ''))
+            ->add($set, $options);
+
+        $files = $factory->getFiles($set, $options);
+
+        $this->assertCount(4, $files);
+    }
+
+    /** @test */
+    public function it_can_get_only_filtered_icons_in_a_set()
+    {
+        $factory = $this->prepareSets();
+
+        $factory->addFilters([
+            'default' => [
+                'zondicon-flag',
+                'solid.camera'
+            ]
+        ]);
+
+        $this->assertCount(2, $factory->getFiles('default'));
+    }
+
+    /** @test */
+    public function it_throws_an_exception_when_filtered_icon_is_not_found()
+    {
+        $factory = $this->prepareSets();
+
+        $factory->addFilters([
+            'default' => [
+                'money'
+            ],
+        ]);
+
+        $this->expectException(SvgNotFound::class);
+        $this->expectExceptionMessage('Svg by name "money" from set "default" not found.');
+
+        $factory->getFiles('default');
+    }
+
+    /** @test */
     public function it_can_retrieve_an_icon()
     {
         $factory = $this->prepareSets();
@@ -81,9 +131,9 @@ class FactoryTest extends TestCase
 
         $icon = $factory->svg('zondicon-flag');
 
-        $expected = <<<'HTML'
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M7.667 12H2v8H0V0h12l.333 2H20l-3 6 3 6H8l-.333-2z"/></svg>
-            HTML;
+        $expected = <<<HTML
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M7.667 12H2v8H0V0h12l.333 2H20l-3 6 3 6H8l-.333-2z"/></svg>
+HTML;
 
         $this->assertSame($expected, $icon->contents());
     }
@@ -124,7 +174,7 @@ class FactoryTest extends TestCase
     {
         $factory = (new Factory(new Filesystem(), 'icon icon-default'))
             ->add('zondicons', [
-                'path' => __DIR__.'/resources/zondicons',
+                'path' => __DIR__ . '/resources/zondicons',
                 'prefix' => 'zondicon',
                 'class' => 'zondicon-class',
             ]);
@@ -141,7 +191,7 @@ class FactoryTest extends TestCase
     {
         $factory = (new Factory(new Filesystem(), 'icon icon-default'))
             ->add('zondicons', [
-                'path' => __DIR__.'/resources/zondicons',
+                'path' => __DIR__ . '/resources/zondicons',
                 'prefix' => 'zondicon',
                 'class' => 'zondicon-class',
             ]);
@@ -149,7 +199,7 @@ class FactoryTest extends TestCase
         $factory = $this->app->instance(Factory::class, $factory);
 
         $this->expectExceptionObject(new SvgNotFound(
-            'Svg by name "foo" from set "zondicons" not found.',
+            'Svg by name "foo" from set "zondicons" not found.'
         ));
 
         $factory->svg('zondicon-foo');
@@ -239,17 +289,6 @@ class FactoryTest extends TestCase
     }
 
     /** @test */
-    public function it_excludes_files_without_an_svg_extension()
-    {
-        $factory = $this->prepareSets();
-
-        $this->expectException(SvgNotFound::class);
-        $this->expectExceptionMessage('Svg by name "invalid-extension" from set "default" not found.');
-
-        $factory->svg('invalid-extension');
-    }
-
-    /** @test */
     public function it_throws_an_exception_when_no_icon_is_found()
     {
         $factory = $this->prepareSets();
@@ -258,19 +297,6 @@ class FactoryTest extends TestCase
         $this->expectExceptionMessage('Svg by name "money" from set "default" not found.');
 
         $factory->svg('money');
-    }
-
-    /** @test */
-    public function it_trims_the_trailing_slash_from_the_path()
-    {
-        $factory = $this->prepareSets();
-
-        $factory->add('default', [
-            'path' => __DIR__.'/resources/svg/',
-            'prefix' => '',
-        ]);
-
-        $this->assertSame(__DIR__.'/resources/svg', $factory->all()['default']['path']);
     }
 
     protected function getPackageProviders($app): array
